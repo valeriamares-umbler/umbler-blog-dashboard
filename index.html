@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umbler Blog</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* ===== RESET E VARIÁVEIS ===== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:             #0f172a;
+            --surface:        #1e293b;
+            --surface-hover:  #263347;
+            --border:         #1e3a6e;
+            --accent:         #1A5CFF;
+            --accent-light:   #6B99FF;
+            --accent-dark:    #0033B0;
+            --accent-darker:  #001866;
+            --accent-pastel:  #D0DFFF;
+            --accent-dim:     rgba(26, 92, 255, 0.10);
+            --accent-border:  rgba(26, 92, 255, 0.25);
+            --text-primary:   #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted:     #64748b;
+            --radius:         12px;
+            --radius-sm:      8px;
+            --radius-xs:      6px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        /* ===== HEADER ===== */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-icone {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #1A5CFF, #0033B0);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(26, 92, 255, 0.4);
+        }
+
+        .header-logo h1 {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-logo p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .header-badge {
+            background: var(--accent-dim);
+            color: var(--accent-light);
+            border: 1px solid var(--accent-border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+
+        /* ===== LAYOUT PRINCIPAL ===== */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px 64px;
+        }
+
+        /* ===== FILTROS ===== */
+        .filtros {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .filtro-grupo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filtro-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .periodo-pills {
+            display: flex;
+            gap: 4px;
+            background: var(--surface);
+            padding: 4px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .pill {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .pill:hover:not(.active) {
+            color: var(--accent-light);
+            background: var(--accent-dim);
+        }
+
+        .pill.active {
+            background: linear-gradient(135deg, #1A5CFF, #0033B0);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(26, 92, 255, 0.45);
+        }
+
+        .filtro-select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.15s;
+            min-width: 220px;
+        }
+
+        .filtro-select:focus { border-color: var(--accent); }
+        .filtro-select option { background: var(--surface); }
+
+        /* ===== ESTADO: LOADING ===== */
+        .estado-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 100px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(26, 92, 255, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: girar 0.7s linear infinite;
+        }
+
+        @keyframes girar { to { transform: rotate(360deg); } }
+
+        /* ===== ESTADO: ERRO ===== */
+        .estado-erro {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .erro-icone { font-size: 44px; opacity: 0.7; }
+
+        .estado-erro h3 {
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+        .estado-erro p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 380px;
+            line-height: 1.6;
+        }
+
+        .btn-retry {
+            margin-top: 8px;
+            background: linear-gradient(135deg, #1A5CFF, #0033B0);
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: opacity 0.15s;
+        }
+
+        .btn-retry:hover { opacity: 0.85; }
+
+        /* ===== OCULTO ===== */
+        .oculto { display: none !important; }
+
+        /* ===== ANIMAÇÃO DE ENTRADA ===== */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-up { animation: fadeUp 0.35s ease both; }
+
+        /* ===== CARDS DE MÉTRICAS ===== */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            cursor: default;
+        }
+
+        /* Linha de gradiente permanente no topo: 3px, por card */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+
+        .cards .card:nth-child(1)::before { background: linear-gradient(90deg, #1A5CFF, #6B99FF); }
+        .cards .card:nth-child(2)::before { background: linear-gradient(90deg, #0033B0, #1A5CFF); }
+        .cards .card:nth-child(3)::before { background: linear-gradient(90deg, #6B99FF, #D0DFFF); }
+
+        .card:hover {
+            border-color: rgba(26, 92, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(26, 92, 255, 0.15);
+        }
+
+        .card-icone {
+            font-size: 22px;
+            margin-bottom: 14px;
+            display: block;
+        }
+
+        .card-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .card-valor {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .card-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* ===== SEÇÕES ===== */
+        .secao {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .secao-titulo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+
+        .secao-titulo-bar {
+            width: 3px;
+            height: 16px;
+            background: linear-gradient(180deg, #1A5CFF, #6B99FF);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .grafico-wrapper {
+            position: relative;
+            height: 260px;
+        }
+
+        .grafico-vazio {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* ===== LISTA DE ARTIGOS ===== */
+        .lista-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .lista-contador {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: rgba(148, 163, 184, 0.08);
+            border: 1px solid var(--border);
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        .artigo-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px 10px;
+            margin: 0 -10px;
+            border-bottom: 1px solid rgba(30, 58, 110, 0.5);
+            border-radius: var(--radius-xs);
+            transition: background 0.15s;
+        }
+
+        .artigo-item:last-child { border-bottom: none; }
+
+        /* Linhas alternadas */
+        #listaArtigos .artigo-item:nth-child(even) {
+            background: rgba(26, 92, 255, 0.04);
+        }
+
+        .artigo-item:hover { background: rgba(26, 92, 255, 0.08) !important; }
+
+        /* Ponto azul à esquerda de cada artigo */
+        .artigo-item::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            min-width: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-top: 7px;
+            flex-shrink: 0;
+        }
+
+        .artigo-titulo {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            line-height: 1.45;
+            margin-bottom: 7px;
+            transition: color 0.15s;
+        }
+
+        .artigo-titulo:hover { color: var(--accent-light); }
+
+        .artigo-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .artigo-data {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .tag {
+            font-size: 11px;
+            font-weight: 500;
+            background: var(--accent-darker);
+            color: var(--accent-light);
+            border: 1px solid rgba(107, 153, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .lista-vazia {
+            text-align: center;
+            padding: 48px 0;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* ===== FILTRO DE PERÍODO PERSONALIZADO ===== */
+        .filtro-separador {
+            width: 1px;
+            height: 28px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        .filtro-date {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            padding: 7px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.15s;
+            color-scheme: dark;
+            width: 136px;
+        }
+
+        .filtro-date:focus { border-color: var(--accent); }
+
+        .btn-aplicar {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            padding: 7px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn-aplicar:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        /* ===== RESPONSIVO ===== */
+        @media (max-width: 900px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 640px) {
+            header { padding: 14px 16px; }
+            .header-badge { display: none; }
+            main { padding: 20px 16px 48px; }
+            .cards { grid-template-columns: 1fr; gap: 14px; }
+            .filtros { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .filtro-select { width: 100%; min-width: unset; }
+            .card-valor { font-size: 26px; }
+            .periodo-pills { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== CABEÇALHO ===== -->
+<header>
+    <div class="header-logo">
+        <div class="header-icone">📊</div>
+        <div>
+            <h1>Umbler Blog</h1>
+            <p>Métricas de publicação · Atualizado agora</p>
+        </div>
+    </div>
+</header>
+
+<!-- ===== CONTEÚDO PRINCIPAL ===== -->
+<main>
+
+    <!-- Filtros de período e categoria -->
+    <div class="filtros">
+        <div class="filtro-grupo">
+            <span class="filtro-label">Período</span>
+            <div class="periodo-pills">
+                <button class="pill" data-dias="7">7 dias</button>
+                <button class="pill active" data-dias="30">30 dias</button>
+                <button class="pill" data-dias="90">3 meses</button>
+                <button class="pill" data-dias="180">6 meses</button>
+                <button class="pill" data-dias="365">12 meses</button>
+            </div>
+        </div>
+        <div class="filtro-separador"></div>
+        <div class="filtro-grupo">
+            <span class="filtro-label">De</span>
+            <input type="date" id="dataInicio" class="filtro-date">
+            <span class="filtro-label">Até</span>
+            <input type="date" id="dataFim" class="filtro-date">
+            <button id="btnAplicar" class="btn-aplicar">Aplicar</button>
+        </div>
+    </div>
+
+    <!-- Estado: carregando -->
+    <div id="estadoLoading" class="estado-loading">
+        <div class="spinner"></div>
+        <span>Carregando dados da API...</span>
+    </div>
+
+    <!-- Estado: erro de carregamento -->
+    <div id="estadoErro" class="estado-erro oculto">
+        <div class="erro-icone">⚠️</div>
+        <h3>Não foi possível carregar os dados</h3>
+        <p id="mensagemErro">Verifique sua conexão e tente novamente.</p>
+        <button class="btn-retry" onclick="carregarDados()">Tentar novamente</button>
+    </div>
+
+    <!-- Conteúdo do dashboard (exibido após carregamento) -->
+    <div id="conteudo" class="oculto">
+
+        <!-- Cards de métricas -->
+        <div class="cards">
+            <div class="card fade-up" style="animation-delay: 0ms">
+                <span class="card-icone">📝</span>
+                <div class="card-label">Total de artigos</div>
+                <div class="card-valor" id="totalArtigos">—</div>
+                <div class="card-sub" id="periodoLabel">no período selecionado</div>
+            </div>
+            <div class="card fade-up" style="animation-delay: 60ms">
+                <span class="card-icone">📅</span>
+                <div class="card-label">Média semanal</div>
+                <div class="card-valor" id="mediaSemanal">—</div>
+                <div class="card-sub">artigos por semana</div>
+            </div>
+            <div class="card fade-up" style="animation-delay: 120ms">
+                <span class="card-icone">🏆</span>
+                <div class="card-label">Mês mais produtivo</div>
+                <div class="card-valor" id="mesProdutivoCont">—</div>
+                <div class="card-sub" id="mesProdutivo">—</div>
+            </div>
+        </div>
+
+        <!-- Gráfico de barras: artigos por mês -->
+        <div class="secao fade-up" style="animation-delay: 180ms">
+            <div class="secao-titulo">
+                <span class="secao-titulo-bar"></span>
+                Artigos publicados por mês
+            </div>
+            <div class="grafico-wrapper">
+                <canvas id="grafico"></canvas>
+                <div id="graficoVazio" class="grafico-vazio oculto">Nenhum dado para exibir no período</div>
+            </div>
+        </div>
+
+        <!-- Lista de artigos -->
+        <div class="secao fade-up" style="animation-delay: 240ms">
+            <div class="lista-header">
+                <div class="secao-titulo" style="margin-bottom: 0;">
+                    <span class="secao-titulo-bar"></span>
+                    Artigos publicados
+                </div>
+                <span class="lista-contador" id="contadorLista">0 artigos</span>
+            </div>
+            <div id="listaArtigos"></div>
+        </div>
+
+    </div>
+</main>
+
+<script>
+    /* ===== CONFIGURAÇÃO ===== */
+    const API_BASE = 'https://blog.umbler.com/br/wp-json/wp/v2';
+
+    /* Labels de exibição para cada período */
+    const LABELS_PERIODO = {
+        '7':   'nos últimos 7 dias',
+        '30':  'nos últimos 30 dias',
+        '90':  'nos últimos 3 meses',
+        '180': 'nos últimos 6 meses',
+        '365': 'nos últimos 12 meses'
+    };
+
+    /* Estado global da aplicação */
+    const estado = {
+        categorias:      {},    /* mapa id → nome */
+        periodoAtivo:    '30',  /* dias do filtro ativo */
+        categoriaAtiva:  '',    /* id da categoria ativa (vazio = todas) */
+        dataCustomInicio: null, /* ISO string do filtro personalizado (De) */
+        dataCustomFim:    null, /* ISO string do filtro personalizado (Até) */
+        grafico:         null   /* instância do Chart.js */
+    };
+
+    /* ===== INICIALIZAÇÃO ===== */
+    async function init() {
+        configurarFiltros();
+        /* Categorias devem carregar antes dos artigos para popular os labels na lista */
+        await carregarCategorias();
+        await carregarDados();
+    }
+
+    /* ===== CONFIGURAÇÃO DOS FILTROS ===== */
+    function configurarFiltros() {
+        /* Botões de período: limpa filtro personalizado ao ativar uma pílula */
+        document.querySelectorAll('.pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                estado.periodoAtivo    = pill.dataset.dias;
+                estado.dataCustomInicio = null;
+                estado.dataCustomFim    = null;
+                carregarDados();
+            });
+        });
+
+        /* Filtro de período personalizado */
+        document.getElementById('btnAplicar').addEventListener('click', () => {
+            const inicioVal = document.getElementById('dataInicio').value;
+            const fimVal    = document.getElementById('dataFim').value;
+            if (!inicioVal && !fimVal) return;
+
+            if (inicioVal) {
+                const d = new Date(inicioVal);
+                d.setHours(0, 0, 0, 0);
+                estado.dataCustomInicio = d.toISOString();
+            } else {
+                estado.dataCustomInicio = null;
+            }
+
+            if (fimVal) {
+                const d = new Date(fimVal);
+                d.setHours(23, 59, 59, 999);
+                estado.dataCustomFim = d.toISOString();
+            } else {
+                estado.dataCustomFim = null;
+            }
+
+            /* Desativa pílulas de período ao usar datas personalizadas */
+            document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+            carregarDados();
+        });
+
+        /* Select de categoria */
+        document.getElementById('selectCategoria').addEventListener('change', e => {
+            estado.categoriaAtiva = e.target.value;
+            carregarDados();
+        });
+    }
+
+    /* ===== CARREGAMENTO DE CATEGORIAS ===== */
+    async function carregarCategorias() {
+        try {
+            const url = `${API_BASE}/categories?per_page=100&hide_empty=true&orderby=count&order=desc`;
+            const resp = await fetch(url);
+            if (!resp.ok) return; /* Falha silenciosa: categorias são opcionais */
+
+            const cats = await resp.json();
+            const select = document.getElementById('selectCategoria');
+
+            cats.forEach(cat => {
+                /* Registrar mapa id → nome para lookup na lista de artigos */
+                estado.categorias[cat.id] = cat.name;
+
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = `${cat.name} (${cat.count})`;
+                select.appendChild(opt);
+            });
+        } catch (e) {
+            /* Não bloquear o dashboard se categorias falharem */
+            console.warn('Categorias indisponíveis:', e.message);
+        }
+    }
+
+    /* ===== CARREGAMENTO DOS ARTIGOS ===== */
+    async function carregarDados() {
+        mostrarLoading();
+        try {
+            const dataInicio = estado.dataCustomInicio || calcularDataInicio(estado.periodoAtivo);
+            const dataFim    = estado.dataCustomFim || null;
+            const artigos = await buscarTodosArtigos(dataInicio, estado.categoriaAtiva, dataFim);
+
+            atualizarCards(artigos);
+            atualizarGrafico(artigos);
+            atualizarLista(artigos);
+            mostrarConteudo();
+        } catch (e) {
+            console.error('Erro ao carregar artigos:', e);
+            const msg = e.name === 'TypeError'
+                ? 'Erro de rede. Verifique se a API está acessível e tente novamente.'
+                : (e.message || 'Erro desconhecido ao acessar a API do WordPress.');
+            mostrarErro(msg);
+        }
+    }
+
+    /* Retorna a data ISO de N dias atrás (início do dia) */
+    function calcularDataInicio(dias) {
+        const d = new Date();
+        d.setDate(d.getDate() - parseInt(dias));
+        d.setHours(0, 0, 0, 0);
+        return d.toISOString();
+    }
+
+    /* Busca artigos paginando automaticamente até obter todos */
+    async function buscarTodosArtigos(dataInicio, categoriaId, dataFim = null) {
+        let pagina = 1;
+        let totalPaginas = 1;
+        const artigos = [];
+
+        while (pagina <= totalPaginas) {
+            let url = `${API_BASE}/posts?after=${dataInicio}&per_page=100&page=${pagina}&status=publish&_fields=id,title,date,categories,link`;
+            if (categoriaId) url += `&categories=${categoriaId}`;
+            if (dataFim)     url += `&before=${dataFim}`;
+
+            const resp = await fetch(url);
+
+            /* Status 400 indica que não há mais páginas */
+            if (resp.status === 400) break;
+            if (!resp.ok) throw new Error(`A API retornou o erro ${resp.status}.`);
+
+            totalPaginas = parseInt(resp.headers.get('X-WP-TotalPages') || '1');
+            const dados = await resp.json();
+            artigos.push(...dados);
+            pagina++;
+        }
+
+        return artigos;
+    }
+
+    /* ===== ATUALIZAÇÃO DOS CARDS ===== */
+    function atualizarCards(artigos) {
+        const total   = artigos.length;
+        const semanas = parseInt(estado.periodoAtivo) / 7;
+        const media   = total > 0 ? (total / semanas).toFixed(1) : '0';
+
+        document.getElementById('totalArtigos').textContent = total;
+        document.getElementById('periodoLabel').textContent  = LABELS_PERIODO[estado.periodoAtivo] || '';
+        document.getElementById('mediaSemanal').textContent  = media;
+
+        /* Mês mais produtivo */
+        if (total === 0) {
+            document.getElementById('mesProdutivoCont').textContent = '—';
+            document.getElementById('mesProdutivo').textContent     = 'sem dados no período';
+            return;
+        }
+
+        const porMes = agruparPorMes(artigos);
+        const [melhorChave, melhorCont] = Object.entries(porMes).sort((a, b) => b[1] - a[1])[0];
+        const [ano, mes] = melhorChave.split('-');
+        const nomeMes = new Date(parseInt(ano), parseInt(mes) - 1, 1)
+            .toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+
+        document.getElementById('mesProdutivoCont').textContent = melhorCont;
+        document.getElementById('mesProdutivo').textContent     = `publicações em ${nomeMes}`;
+    }
+
+    /* ===== ATUALIZAÇÃO DO GRÁFICO ===== */
+    function atualizarGrafico(artigos) {
+        const canvas   = document.getElementById('grafico');
+        const vazioEl  = document.getElementById('graficoVazio');
+
+        /* Sem dados: exibe mensagem e destrói gráfico anterior */
+        if (artigos.length === 0) {
+            canvas.classList.add('oculto');
+            vazioEl.classList.remove('oculto');
+            if (estado.grafico) { estado.grafico.destroy(); estado.grafico = null; }
+            return;
+        }
+
+        canvas.classList.remove('oculto');
+        vazioEl.classList.add('oculto');
+
+        const porMes = agruparPorMes(artigos);
+        let chaves   = Object.keys(porMes).sort();
+
+        /* Se o filtro começa após o dia 1, o primeiro mês tem dados parciais.
+           Removê-lo do gráfico evita exibir uma barra enganosamente baixa. */
+        const dataInicio = new Date(estado.dataCustomInicio || calcularDataInicio(estado.periodoAtivo));
+        if (chaves.length > 1 && dataInicio.getDate() !== 1) {
+            const chaveInicio = `${dataInicio.getFullYear()}-${String(dataInicio.getMonth() + 1).padStart(2, '0')}`;
+            if (chaves[0] === chaveInicio) chaves = chaves.slice(1);
+        }
+
+        /* Formatar rótulos do eixo X como "jan. 24" */
+        const labelsX = chaves.map(c => {
+            const [a, m] = c.split('-');
+            return new Date(parseInt(a), parseInt(m) - 1, 1)
+                .toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+        });
+        const valores = chaves.map(c => porMes[c]);
+
+        /* Destruir instância anterior antes de recriar */
+        if (estado.grafico) estado.grafico.destroy();
+
+        /* Gradiente vertical nas barras: #0033B0 (topo) → #6B99FF (base) */
+        const gradienteBarra = (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            if (!chartArea) return 'rgba(26, 92, 255, 0.75)';
+            const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            g.addColorStop(0, 'rgba(0, 51, 176, 0.90)');
+            g.addColorStop(1, 'rgba(107, 153, 255, 0.75)');
+            return g;
+        };
+
+        estado.grafico = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labelsX,
+                datasets: [{
+                    label: 'Artigos',
+                    data: valores,
+                    backgroundColor: gradienteBarra,
+                    borderColor: '#1A5CFF',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    hoverBackgroundColor: 'rgba(107, 153, 255, 0.90)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#6B99FF',
+                        bodyColor: '#f1f5f9',
+                        borderColor: '#1e3a6e',
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.y} artigo${ctx.parsed.y !== 1 ? 's' : ''}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid:   { color: 'rgba(30, 58, 110, 0.4)' },
+                        ticks:  { color: '#94a3b8', font: { size: 12 } },
+                        border: { color: 'transparent' }
+                    },
+                    y: {
+                        grid:        { color: 'rgba(30, 58, 110, 0.4)' },
+                        ticks:       { color: '#94a3b8', stepSize: 1, font: { size: 12 } },
+                        beginAtZero: true,
+                        border:      { color: 'transparent' }
+                    }
+                }
+            }
+        });
+    }
+
+    /* ===== ATUALIZAÇÃO DA LISTA DE ARTIGOS ===== */
+    function atualizarLista(artigos) {
+        const lista    = document.getElementById('listaArtigos');
+        const contador = document.getElementById('contadorLista');
+        const total    = artigos.length;
+
+        contador.textContent = `${total} artigo${total !== 1 ? 's' : ''}`;
+
+        if (total === 0) {
+            lista.innerHTML = '<div class="lista-vazia">Nenhum artigo encontrado para os filtros selecionados.</div>';
+            return;
+        }
+
+        /* Ordenar do mais recente para o mais antigo */
+        const ordenados = [...artigos].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        lista.innerHTML = ordenados.map(artigo => {
+            const data = new Date(artigo.date);
+            const dataFmt = data.toLocaleDateString('pt-BR', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            });
+
+            return `
+                <div class="artigo-item">
+                    <div style="flex: 1; min-width: 0;">
+                        <a href="${artigo.link || '#'}" target="_blank" rel="noopener noreferrer" class="artigo-titulo">
+                            ${artigo.title.rendered}
+                        </a>
+                        <div class="artigo-meta">
+                            <span class="artigo-data">📅 ${dataFmt}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /* ===== HELPER: agrupar artigos por mês ===== */
+    function agruparPorMes(artigos) {
+        return artigos.reduce((acc, a) => {
+            const d    = new Date(a.date);
+            const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            acc[chave] = (acc[chave] || 0) + 1;
+            return acc;
+        }, {});
+    }
+
+    /* ===== CONTROLE DE ESTADO DA INTERFACE ===== */
+    function mostrarLoading() {
+        document.getElementById('estadoLoading').classList.remove('oculto');
+        document.getElementById('estadoErro').classList.add('oculto');
+        document.getElementById('conteudo').classList.add('oculto');
+    }
+
+    function mostrarConteudo() {
+        document.getElementById('estadoLoading').classList.add('oculto');
+        document.getElementById('estadoErro').classList.add('oculto');
+        document.getElementById('conteudo').classList.remove('oculto');
+    }
+
+    function mostrarErro(mensagem) {
+        document.getElementById('estadoLoading').classList.add('oculto');
+        document.getElementById('estadoErro').classList.remove('oculto');
+        document.getElementById('conteudo').classList.add('oculto');
+        document.getElementById('mensagemErro').textContent = mensagem;
+    }
+
+    /* ===== INICIAR AO CARREGAR A PÁGINA ===== */
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
